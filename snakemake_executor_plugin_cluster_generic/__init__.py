@@ -13,6 +13,7 @@ import time
 from typing import Generator, List, Optional
 
 from snakemake_interface_common.exceptions import WorkflowError
+from snakemake_interface_executor_plugins.utils import ShellRunner
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
 from snakemake_interface_executor_plugins.executors.remote import RemoteExecutor
 from snakemake_interface_executor_plugins.settings import (
@@ -327,17 +328,18 @@ class Executor(RemoteExecutor):
         else:
             return ""
 
-    def get_job_exec_suffix(self, job: JobExecutorInterface):
+    def set_job_exec_suffix(self, runner: ShellRunner, job: JobExecutorInterface):
         if self.workflow.executor_settings.status_cmd:
-            return "exit 0 || exit 1"
+            # Have the script exit, even if there are commands after {exec_job}
+            # An error in the job will now always trigger "exit 1"
+            runner.append_command( ["exit", "0"] )
         else:
             # TODO wrap with watch and touch {jobrunning}
             # check modification date of {jobrunning} in the wait_for_job method
 
-            return (
-                f"touch {repr(self.get_jobfinished_marker(job))} || "
-                f"(touch {repr(self.get_jobfailed_marker(job))}; exit 1)"
-            )
+            # Return: (commands, on_error, finally)
+            runner.append_command( ["touch", self.get_jobfinished_marker(job)] )
+            runner.append_on_error( ["touch", self.get_jobfailed_marker(job)] )
 
     def get_jobfinished_marker(self, job: JobExecutorInterface):
         return os.path.join(self.tmpdir, f"{job.jobid}.jobfinished")
