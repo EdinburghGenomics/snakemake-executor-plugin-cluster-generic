@@ -332,14 +332,14 @@ class Executor(RemoteExecutor):
         if self.workflow.executor_settings.status_cmd:
             # Have the script exit, even if there are commands after {exec_job}
             # An error in the job will now always trigger "exit 1"
-            runner.append_command( ["exit", "0"] )
+            runner.append_command(["exit", "0"])
         else:
             # TODO wrap with watch and touch {jobrunning}
             # check modification date of {jobrunning} in the wait_for_job method
 
             # Return: (commands, on_error, finally)
-            runner.append_command( ["touch", self.get_jobfinished_marker(job)] )
-            runner.append_on_error( ["touch", self.get_jobfailed_marker(job)] )
+            runner.append_command(["touch", self.get_jobfinished_marker(job)])
+            runner.append_on_error(["touch", self.get_jobfailed_marker(job)])
 
     def get_jobfinished_marker(self, job: JobExecutorInterface):
         return os.path.join(self.tmpdir, f"{job.jobid}.jobfinished")
